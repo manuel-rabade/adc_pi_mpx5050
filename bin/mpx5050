@@ -1,0 +1,100 @@
+#!/usr/bin/env python3
+
+# MPX5050 + ADC Pi + Raspberry Pi
+
+# Based on abe electronic demo adcpiv2.py version 2.0
+# http://www.abelectronics.co.uk/codesamples/info.aspx
+
+# Copyright 2014 Manuel Rodrigo Rábade García <manuel@rabade.net>
+ 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+  
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+  
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+import quick2wire.i2c as i2c
+
+# see adc pi v2 datasheet on address selection
+adc_address1 = 0x68
+adc_address2 = 0x69
+
+# see mcp3424 datasheet on addresses and config
+adc_channel1 = 0x9c
+adc_channel2 = 0xbc
+adc_channel3 = 0xdc
+adc_channel4 = 0xfd
+varDivisior = 64 
+varMultiplier = (2.4705882/varDivisior)/1000
+
+# calibration values
+samples = 12
+cal_on = 0
+vcc_cal = 5
+mpx_cal1 = 0
+mpx_cal2 = 0
+temp_f = 1
+
+# water output
+gravity = 9.806605
+density = 1
+
+with i2c.I2CMaster() as bus:
+    def changechannel(address, adcConfig):
+        bus.transaction(i2c.writing_bytes(address, adcConfig))
+
+    def getadcreading(address):
+        h, m, l ,s = bus.transaction(i2c.reading(address,4))[0]
+        while (s & 128):
+            h, m, l, s  = bus.transaction(i2c.reading(address,4))[0]
+        # shift bits to product result
+        t = ((h & 0b00000001) << 16) | (m << 8) | l
+        # check if positive or negative number and invert if needed
+        if (h > 128):
+            t = ~(0x020000 - t)
+        return t * varMultiplier
+
+    def getmpxpressure(volts, vcc, mpx_cal, vcc_cal, tf):
+        # from mpx5050 datasheet
+        if (cal_on):
+            err = mpx_cal * tf * 0.018 * vcc_cal
+        else:
+            err = 0
+        return (volts - (0.04 * vcc) + (err * -1)) / (0.018 * vcc);
+    
+    def reportchannel(i, adc, mpx):
+        print ("Channel " + i + ":\t" + \
+               format(adc, "02f") + " V\t" + \
+               format(mpx, "02f") + " Pa\t" + \
+               format(mpx / (density * gravity), "02f") + " m")
+
+    vcc = [ ]
+    adc1 = [ ]
+    adc2 = [ ]
+
+    while samples:
+        changechannel(adc_address2, adc_channel4)
+        vcc.append(getadcreading(adc_address2))
+        changechannel(adc_address1, adc_channel1)
+        adc1.append(getadcreading(adc_address1))
+        changechannel(adc_address1, adc_channel2)
+        adc2.append(getadcreading(adc_address1))
+        samples -= 1
+
+    vcc_p = sum(vcc)/len(vcc)
+    print ("Vcc:\t\t" + format(vcc_p, "02f") + " V")
+
+    adc1_p = sum(adc1)/len(adc1)
+    mpx1 = getmpxpressure(adc1_p, vcc_p, mpx_cal1, vcc_cal, temp_f)
+    reportchannel("1", adc1_p, mpx1)
+
+    adc2_p = sum(adc2)/len(adc2)
+    mpx2 = getmpxpressure(adc2_p, vcc_p, mpx_cal2, vcc_cal, temp_f)
+    reportchannel("2", adc2_p, mpx2)
