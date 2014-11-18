@@ -2,7 +2,7 @@
 
 # MPX5050 + ADC Pi + Raspberry Pi
 
-# Based on abe electronic demo adcpiv2.py version 2.0
+# Based on adcpiv2.py demo by ABE Electronics UK.
 # http://www.abelectronics.co.uk/codesamples/info.aspx
 
 # Copyright 2014 Manuel Rodrigo Rábade García <manuel@rabade.net>
@@ -22,6 +22,18 @@
 
 import quick2wire.i2c as i2c
 
+# calibration values
+samples = 1
+cal_on = 0
+vcc_cal = 5
+mpx_cal1 = 0
+mpx_cal2 = 0
+temp_f = 1
+
+# water output
+gravity = 9.806605
+density = 1
+
 # see adc pi v2 datasheet on address selection
 adc_address1 = 0x68
 adc_address2 = 0x69
@@ -33,18 +45,6 @@ adc_channel3 = 0xdc
 adc_channel4 = 0xfd
 varDivisior = 64 
 varMultiplier = (2.4705882/varDivisior)/1000
-
-# calibration values
-samples = 12
-cal_on = 0
-vcc_cal = 5
-mpx_cal1 = 0
-mpx_cal2 = 0
-temp_f = 1
-
-# water output
-gravity = 9.806605
-density = 1
 
 with i2c.I2CMaster() as bus:
     def changechannel(address, adcConfig):
@@ -70,10 +70,10 @@ with i2c.I2CMaster() as bus:
         return (volts - (0.04 * vcc) + (err * -1)) / (0.018 * vcc);
     
     def reportchannel(i, adc, mpx):
-        print ("Channel " + i + ":\t" + \
-               format(adc, "02f") + " V\t" + \
-               format(mpx, "02f") + " Pa\t" + \
-               format(mpx / (density * gravity), "02f") + " m")
+        print (i + "\t\t" + \
+               format(adc, "02f") + "\t" + \
+               format(mpx, "02f") + "\t" + \
+               format(mpx / (density * gravity), "02f"))
 
     vcc = [ ]
     adc1 = [ ]
@@ -88,8 +88,10 @@ with i2c.I2CMaster() as bus:
         adc2.append(getadcreading(adc_address1))
         samples -= 1
 
+    print ("channel\t\t v\t\t pa\t\t m")
+    print ("----------------------------------------------------------------")
+
     vcc_p = sum(vcc)/len(vcc)
-    print ("Vcc:\t\t" + format(vcc_p, "02f") + " V")
 
     adc1_p = sum(adc1)/len(adc1)
     mpx1 = getmpxpressure(adc1_p, vcc_p, mpx_cal1, vcc_cal, temp_f)
@@ -98,3 +100,5 @@ with i2c.I2CMaster() as bus:
     adc2_p = sum(adc2)/len(adc2)
     mpx2 = getmpxpressure(adc2_p, vcc_p, mpx_cal2, vcc_cal, temp_f)
     reportchannel("2", adc2_p, mpx2)
+
+    print ("vcc\t\t" + format(vcc_p, "02f"))
