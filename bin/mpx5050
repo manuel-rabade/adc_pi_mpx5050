@@ -6,17 +6,17 @@
 # http://www.abelectronics.co.uk/codesamples/info.aspx
 
 # Copyright 2014 Manuel Rodrigo Rábade García <manuel@rabade.net>
- 
+
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-  
+
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-  
+
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
@@ -43,7 +43,7 @@ adc_channel1 = 0x9c
 adc_channel2 = 0xbc
 adc_channel3 = 0xdc
 adc_channel4 = 0xfd
-varDivisior = 64 
+varDivisior = 64
 varMultiplier = (2.4705882/varDivisior)/1000
 
 with i2c.I2CMaster() as bus:
@@ -68,7 +68,7 @@ with i2c.I2CMaster() as bus:
         else:
             err = 0
         return (volts - (0.04 * vcc) + (err * -1)) / (0.018 * vcc);
-    
+
     def reportchannel(i, adc, mpx):
         print (i + "\t\t" + \
                format(adc, "02f") + "\t" + \
@@ -88,7 +88,7 @@ with i2c.I2CMaster() as bus:
         adc2.append(getadcreading(adc_address1))
         samples -= 1
 
-    print ("channel\t\t v\t\t pa\t\t m")
+    print ("channel\t\t v\t\t kpa\t\t m")
     print ("----------------------------------------------------------------")
 
     vcc_p = sum(vcc)/len(vcc)
